@@ -4,8 +4,17 @@ const bigquery = new BigQuery();
 const express = require('express')
 const cookieParser = require('cookie-parser');
 const { v4: uuid } = require('uuid');
+const cors = require('cors');
 const app = express()
 app.use(bodyParser.json());
+
+const corsOptions ={
+    origin:'http://localhost:3000', 
+    credentials:true,            //access-control-allow-credentials:true
+    optionSuccessStatus:200
+}
+
+app.use(cors(corsOptions));
 
 /*************** 5000 port server 请求球员数据 ***************/
 app.use((request,response,next)=>{
@@ -16,8 +25,7 @@ app.use((request,response,next)=>{
 app.get('/playerStatistic', async (request,response)=>{
 	let playerName = decodeURI(request.url).split('?')[1].split('=')[1].split('+').join(' ');
 
-	// const playerStatistics = await query(playerName, 5000, 'player_information');
-	const playerStatistics = await query(playerName, 5000, 'test_table');
+	const playerStatistics = await query(playerName, 5000, 'player_information');
 	// 取小数点后1位
 	StatisticFix(playerStatistics);
 	response.send(playerStatistics[0]);
@@ -53,41 +61,18 @@ app.use((request,response,next)=>{
 
 app.post('/predictionStatistic', async (request,response)=>{
 	const predictionStatistic = request.body;
-	// 判断预测什么奖项，要插入哪一张表
-	let table;
-	switch(predictionStatistic.predPrize) {
-		case 'mvp':
-			table = 'playerdata_to_alg_mvp';
-			break;
-		case 'dpoy':
-			table = 'playerdata_to_alg_dpoy';
-			break;
-		case 'mip':
-			table = 'playerdata_to_alg_mip';
-			break;
-		default:
-			table = 'playerdata_to_alg_mvp';
-			break;
-	}
-	const rows = [{
-		id: predictionStatistic.id,
+	// 新逻辑：对一个算好概率的的新表查询，params是一个对象，包含日期，球员id和要检索的奖项
+	const curDate = new Date();
+	const curDay = getCurDay(curDate);
+	const params = {
+		date: curDay,
 		name: predictionStatistic.name,
-		pts: predictionStatistic.pts,
-		reb: predictionStatistic.reb,
-		ast: predictionStatistic.ast,
-		blk: predictionStatistic.blk,
-		stl: predictionStatistic.stl,
-		tov: predictionStatistic.tov,
-		new_request: 1
-	}];
-	const isInserted = addToTable(rows, '6893project', table);
-	let percentage;
-	if(isInserted) percentage = JSON.stringify(0.917);
-	// if(isInserted) percentage = await query(predictionStatistic.name, 5002, 'playerdata_to_alg_mvp');
-	// else response.send('-1');
-	// 1表示插入成功，2表示插入失败
-	setTimeout(() => {response.send(percentage)}, 1000);
-	// response.send(percentage);
+		prize: predictionStatistic.predPrize
+	}
+	const prizePercentage = await query(params, 5002, `${predictionStatistic.predPrize}_prediction_results`);
+	const percentage = JSON.stringify(prizePercentage[0][`${predictionStatistic.predPrize}_prediction`]);
+	// setTimeout(() => {response.send(percentage)}, 2000);
+	response.send(percentage);
 })
 
 app.listen(5002,(err)=>{
@@ -109,27 +94,35 @@ app.post('/loginVerification', async (request,response)=>{
 	// 1表示账号错误，2表示密码错误，3表示成功
 
 	/*************** 缓存数据到cookie中 ***************/
-	if(request.cookies.account && request.cookies.password) {  // 首先得有，说明以前设置过
+	if(request.cookies.account && request.cookies.password) {  // cookie中有缓存的账号密码，直接读取，不作查询
 		// console.log(request.cookies);
 		if(request.cookies.account === accountNumber && request.cookies.password === passWord) {  // 都命中
 			response.send('3'); // 直接传，不用上数据库搜索了
 		} else if(request.cookies.account === accountNumber && request.cookies.password !== passWord) { // 账号对了，密码不对
 			response.send('2'); // 也直接传，不用上数据库搜索
+		} else {
+			const SQLpassword = await query(accountNumber, 5003, 'account_information');
+			if(!SQLpassword.length) response.send('1');
+			else if(SQLpassword[0].password !== passWord) {
+				response.send('2');
+			} else {
+				response.cookie('account', accountNumber, { maxAge: 60 * 1000, httpOnly: true });
+				response.cookie('password', passWord, { maxAge: 60 * 1000, httpOnly: true });
+				response.send('3');
+			}
+		}
+	} else { // cookie中没有记住的账号密码，或者存了但是没有匹配的账号时，上数据库查询，并在成功查到时更新cookie
+		const SQLpassword = await query(accountNumber, 5003, 'account_information');
+		if(!SQLpassword.length) response.send('1');
+		else if(SQLpassword[0].password !== passWord) {
+			response.send('2');
+		} else {
+			response.cookie('account', accountNumber, { maxAge: 60 * 1000, httpOnly: true });
+			response.cookie('password', passWord, { maxAge: 60 * 1000, httpOnly: true });
+			response.send('3');
 		}
 	}
-	// cookie中没有记住的账号密码，或者存了但是没有匹配的账号时，上数据库查询，并在成功查到时更新cookie
-	const SQLpassword = await query(accountNumber, 5003, 'account_information');
-	if(!SQLpassword.length) response.send('1');
-	else if(SQLpassword[0].password !== passWord) {
-		response.send('2');
-	} else {
-		response.cookie('account', accountNumber, {maxAge: 60 * 1000});
-		response.cookie('password', passWord, {maxAge: 60 * 1000});
-		response.send('3');
-	}
-	/***************************************************/
-
-	// 传统方法
+	/************************ 传统方法 ***************************/
 	// const SQLpassword = await query(accountNumber, 5003);
 	// if(!SQLpassword.length) response.send('1');
 	// else {
@@ -173,27 +166,31 @@ app.listen(5004,(err)=>{
 
 
 /*************** functions ***************/
-// 搜索球员信息
-async function query(keyword, port, tableId) {
+// Search player information
+async function query(params, port, tableId) {
 	let query;
 	switch(port) {
 		case 5000:
-			// 处理名字中带有'影响SQL搜索
-			keyword = handleColon(keyword);
+			// Processing name with'influence SQL search
+			params = handleColon(params);
 			// query player information from name
-			query = `SELECT * FROM \`database-bigquery.6893project.${tableId}\` WHERE name = \'${keyword}\' LIMIT 100`;
+			query = `SELECT * FROM \`bigdataproject-335101.6893project.${tableId}\` WHERE name = \'${params}\' LIMIT 100`;
 			break;
 		case 5001:
-			// 处理名字中带有'影响SQL搜索
-			keyword = handleColon(keyword);
+			// Processing name with'influence SQL search
+			params = handleColon(params);
 			// query player information from key of name
-			query = `SELECT id, name, src FROM \`database-bigquery.6893project.${tableId}\` WHERE lower(name) LIKE lower(\'%${keyword}%\') LIMIT 10`;
+			query = `SELECT id, name, src FROM \`bigdataproject-335101.6893project.${tableId}\` WHERE lower(name) LIKE lower(\'%${params}%\') LIMIT 10`;
 			break;
 		case 5002:
-			keyword = handleColon(keyword);
-			query = `SELECT percentage FROM \`database-bigquery.6893project.${tableId}\` WHERE name = \'${keyword}\' LIMIT 100`;
+			let prize = params.prize;
+			// Processing name with'influence SQL search
+			let name = handleColon(params.name);
+			let date = params.date;
+			query = `SELECT ${prize}_prediction FROM \`bigdataproject-335101.6893project.${tableId}\` WHERE name = \'${name}\' AND date = \'${date}\' LIMIT 100`;
+			break;
 		case 5003:
-			query = `SELECT password FROM \`database-bigquery.6893project.${tableId}\` WHERE account = \'${keyword}\'`;
+			query = `SELECT password FROM \`bigdataproject-335101.6893project.${tableId}\` WHERE account = \'${params}\'`;
 			break;
 	}
 
@@ -246,4 +243,28 @@ function handleColon(name) {
 		i++;
 	}
 	return name;
+}
+
+// 由今日new Date()得到 YYYY/MM/DD 格式的字符串
+function getCurDay(date) {
+	// 返回要获取的数据的日期，格式YYYY/MM/DD
+	let curDay;
+	// 今日的时间戳
+	let curTimeStamp;
+	// 获取今日零点
+	const todayZero = new Date().setHours(0, 0, 0, 0);
+	// 获取今日凌晨5点时间
+	const todayFive = new Date().setHours(0, 0, 0, 0) + 5 * 60 * 60 * 1000;
+	// 获取当前时间
+	const curTime = new Date().getTime();
+	// 如果当前时间在0点到5点之间，设置为获取昨日日期
+	curTimeStamp = curTime < todayFive ? curTime - 24 * 60 * 60 * 1000 : curTime;
+	// 获取当天日期
+	const today = new Date(curTimeStamp);
+	const curYear = today.getFullYear().toString();
+	const curMonth = (today.getMonth() + 1).toString();
+	const curDate = today.getDate();
+
+	curDay = curYear + '-' + curMonth + '-' + curDate;
+	return curDay;
 }
