@@ -32,6 +32,7 @@ Under folder 'mvp-prediction-frontend' run order:
    `npm start`
    
 ### 3. Front-end page description
+
     First of all, user should sign up to own an account of his or her own. In this case the web 
    browser can remenber what the user search in history, which save the searching time for not 
    sending requests to the backend every time a user search the same basketball player. 
