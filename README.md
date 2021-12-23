@@ -32,7 +32,7 @@ Under folder `mvp-prediction-frontend` run the following commands:
 
 2. Start webpage: `npm start`
    
-### 3. Front-end page description
+### 3. Front-end Page Description
    * First of all, guests should create an account of his or her own. In this case the web
    browser will remember the user history search, which save time for not 
    sending requests to the backend every time a user search the same basketball player. 
