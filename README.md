@@ -34,9 +34,9 @@ Under folder 'mvp-prediction-frontend' run order:
 ### 3. Front-end page description
    1
    First of all, user should sign up to own an account of his or her own. In this case the web
-   browser can remenber what the user search in history, which save the searching time for not 
+   browser can remember what the user search in history, which save the searching time for not 
    sending requests to the backend every time a user search the same basketball player. 
-    After loging in with new account, user shall just input the keywords of a player to the search
+    After logging in with new account, user shall just input the keywords of a player to the search
    box. This optimization measure helps users quickly find the player they want to predict without 
    getting stuck like what the player’s full name is. 
     Before the request of predicting MVP award been sent, player card with statistics up to now and
