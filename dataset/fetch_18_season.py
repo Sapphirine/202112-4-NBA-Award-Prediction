@@ -24,16 +24,17 @@ def strip_accents(text):
 
 
 if __name__ == "__main__":
-    url = 'https://www.basketball-reference.com/leagues/NBA_2020_totals.html'
-    candidates = ["Giannis Antetokounmpo", "LeBron James", "James Harden", "Luka Doncic",
-                  "Kawhi Leonard", "Anthony Davis", "Chris Paul", "Damian Lillard", "Nikola Jokic",
-                  "Pascal Siakam", "Jimmy Butler", "Jayson Tatum"]
-    mip_candidates = ["Brandon Ingram", "Bam Adebayo", "Luka Doncic", "Jayson Tatum", "Devonte' Graham", "Shai Gilgeous-Alexander",
-                      "Pascal Siakam", "Christian Wood", "Trae Young", "Fred VanVleet", "Davis Bertans",
-                      "Jaylen Brown", "Markelle Fultz", "Spencer Dinwiddie", "Duncan Robinson"]
-    dp_candidates = ["Giannis Antetokounmpo", "Anthony Davis", "Rudy Gobert", "Ben Simmons", "Bam Adebayo",
-                     "Patrick Beverley", "Marcus Smart", "Andre Drummond", "Kawhi Leonard",
-                     "Brook Lopez", "Hassan Whiteside", "Jarrett Allen"]
+    url = 'https://www.basketball-reference.com/leagues/NBA_2019_totals.html'
+    candidates = ["Giannis Antetokounmpo", "James Harden", "Paul George", "Nikola Jokic",
+                  "Stephen Curry", "Damian Lillard", "Joel Embiid", "Kevin Durant", "Kawhi Leonard",
+                  "Russell Westbrook", "Rudy Gobert", "LeBron James"]
+    mip_candidates = ["Pascal Siakam", "D'Angelo Russell", "De'Aaron Fox", "Buddy Hield", "Nikola Vucevic",
+                      "Domantas Sabonis", "Montrezl Harrell", "Derrick Rose", "John Collins", "Giannis Antetokounmpo",
+                      "Danilo Gallinari", "Malik Beasley", "Paul George", "Thomas Bryant",
+                      "Bojan Bogdanovic", "Willie Cauley‐Stein", "Derrick White", "Bryn Forbes",
+                      "Jerami Grant", "Zach LaVine", "Josh Richardson", "Spencer Dinwiddie"]
+    dp_candidates = ["Rudy Gobert", "Giannis Antetokounmpo", "Paul George", "Joel Embiid", "Myles Turner",
+                     "Draymond Green", "Kawhi Leonard", "Marcus Smart", "Jarrett Allen", "Patrick Beverley"]
     html = get_one_page(url)
     soup = BeautifulSoup(html, features='html.parser')
 
@@ -78,7 +79,8 @@ if __name__ == "__main__":
         else:
             continue
 
-    df = pd.DataFrame.from_records(stats, columns=list(personal_stat.keys()))
+    df = pd.DataFrame.from_records(stats, columns=["id", "name", "mvpLabel", "mipLabel", "dpoyLabel", "g", "trb",
+                                                   "ast", "stl", "blk", "tov", "pts"])
     df.rename(columns={"trb": "reb"}, inplace=True)
     df.pts = df.pts / df.g
     df.reb = df.reb / df.g
@@ -87,4 +89,4 @@ if __name__ == "__main__":
     df.stl = df.stl / df.g
     df.tov = df.tov / df.g
     df = df.drop(columns="g")
-    df.to_csv("player_stats_2019_2020.csv", index=False, encoding='utf_8_sig')
+    df.to_csv("player_stats_2018_2019.csv", index=False, encoding='utf_8_sig')
