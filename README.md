@@ -1,4 +1,4 @@
-# NBA-Award-prediction
+# NBA-Award-Prediction
 
 Authors: Yuting Zhou, Zichen Wang, Mingzhe Hu
 
