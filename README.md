@@ -6,7 +6,7 @@ Authors: Yuting Zhou, Zichen Wang, Mingzhe Hu
 
 Platform: Google Cloud Platform with BigQuery activated
 
-Software: VSCode
+Software: VSCode, PyCharm
 
 ## Data Acquisition
 
