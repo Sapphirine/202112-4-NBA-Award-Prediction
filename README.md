@@ -14,9 +14,9 @@ Data fetch is triggered manually or with respect to the current timing. Please r
 
 ## Front-end page startup method
 
-For details, please take a look at our demo video: `Front-end-page-demo.mp4`
+For details, please take a look at our demo video: `Front-end page video12.6.mp4`
 
-### 1. start server
+### 1. Start Server
 
 Please run the program with Visual Studio Code. Under folder 'test proxy server', follow the instructions:
 
@@ -24,7 +24,7 @@ Please run the program with Visual Studio Code. Under folder 'test proxy server'
 
 2. Start server: `node server.js`
 
-### 2. start webpage
+### 2. Start Webpage
 
 Under folder `mvp-prediction-frontend` run the following commands:
 
